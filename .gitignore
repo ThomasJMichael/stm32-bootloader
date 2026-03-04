@@ -1,0 +1,16 @@
+# Build directory and compiled artifacts
+build/
+*.o
+*.elf
+*.bin
+*.map
+*.hex
+*.d
+*.lst
+*.su
+
+# Editor files
+*.swp
+*~
+.vscode/
+compile_commands.json
