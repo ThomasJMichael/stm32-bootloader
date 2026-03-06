@@ -5,7 +5,9 @@ Core/Src/nvmem.c \
 Core/Src/bootloader_main.c \
 Core/Src/bootloader.c \
 Core/Src/update_flag.c \
-Core/Src/fw_verify.c
+Core/Src/fw_verify.c \
+Core/Src/xmodem.c \
+Core/Src/xmodem_uart.h
 
 # Append to C_SOURCES so the linker command includes them in the final string
 C_SOURCES += $(CUSTOM_SOURCES)
