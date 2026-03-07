@@ -28,3 +28,22 @@ void bootloader_jump_to_app(void) {
   // Jump to application entry point
   ((void (*)(void))app_entry_point)();
 }
+
+bool bootloader_check_force_update(void) {
+  uint32_t start_tick = HAL_GetTick();
+  const uint32_t required_hold_time = 2000; // 2 seconds
+
+  // If button isn't even pressed at start, skip immediately
+  if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) {
+    return false; // Proceed to normal boot
+  }
+
+  // Button is held, wait to see if held
+  while (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET) {
+    if ((HAL_GetTick() - start_tick) >= required_hold_time) {
+      return true; // Special status: Enter Update Mode
+    }
+  }
+
+  return false; // Button released too early, boot normally
+}
