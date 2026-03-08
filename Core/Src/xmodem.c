@@ -1,14 +1,15 @@
 #include "xmodem.h"
 #include "main.h"
 #include "nvmem.h"
-#include "stm32f4xx_hal.h"
 #include "xmodem_uart.h"
+#include <string.h>
 
 extern const PartitionInfo Partitions[];
 
 static uint8_t packet_number = 1;
 static uint32_t flash_write_offset = 0;
 static uint8_t packet_buffer[XMODEM_BUFFER_SIZE];
+static uint32_t aligned_payload[256];
 static uint16_t current_payload_size = 0;
 static uint8_t error_count = 0;
 
@@ -35,11 +36,8 @@ static xmodem_state_t handle_sync_state(void) {
 static xmodem_state_t handle_recieve_state(void) {
   uint8_t steering_byte;
   if (!uart_read_byte(&steering_byte, SYNC_TIMEOUT_MS)) {
-    // Timeout. If we are on first packet, we send sync byte again. Otherwise,
-    // we attempt a retry with NAK
     uart_write_byte((packet_number == 1) ? XMODEM_C : XMODEM_NAK);
     ERROR_ABORT_IF_MAX_REACHED();
-
     return STATE_RECEIVE;
   }
 
@@ -54,19 +52,18 @@ static xmodem_state_t handle_recieve_state(void) {
     uart_write_byte(XMODEM_ACK);
     return STATE_COMPLETE;
   default:
-    // We received something unexpected. Flush the UART and attempt to resync.
     uart_flush();
     uart_write_byte((packet_number == 1) ? XMODEM_C : XMODEM_NAK);
     ERROR_ABORT_IF_MAX_REACHED();
     return STATE_RECEIVE;
   }
 
-  uint16_t expected_packet_size =
-      current_payload_size + 4; // Header(2) + Payload + CRC(2)
+  uint16_t expected_packet_size = current_payload_size + 4;
+
+  // Reverted to your safe 1-byte loop!
   for (int i = 0; i < expected_packet_size; i++) {
     if (!uart_read_byte(&packet_buffer[i], 1000)) {
-      uart_flush(); // Something went wrong during packet reception. Flush and
-                    // attempt retry.
+      uart_flush();
       uart_write_byte(XMODEM_NAK);
       ERROR_ABORT_IF_MAX_REACHED();
       return STATE_RECEIVE;
@@ -74,6 +71,7 @@ static xmodem_state_t handle_recieve_state(void) {
   }
   return STATE_VALIDATE;
 }
+
 static xmodem_state_t handle_validate_state(void) {
   // Byte 0 and Byte 1 must always be exact logical opposites.
   if ((packet_buffer[0] + packet_buffer[1]) != 0xFF) {
@@ -113,7 +111,11 @@ static xmodem_state_t handle_validate_state(void) {
   return STATE_PROCESS;
 }
 static xmodem_state_t handle_process_state(void) {
-  if (nvmem_write(STAGING, flash_write_offset, &packet_buffer[2],
+  // Safely copy the unaligned packet data into the strictly aligned memory
+  // buffer
+  memcpy(aligned_payload, &packet_buffer[2], current_payload_size);
+
+  if (nvmem_write(STAGING, flash_write_offset, (uint8_t *)aligned_payload,
                   current_payload_size) != RESULT_OK) {
     uart_flush();
     uart_write_byte(XMODEM_CAN);
@@ -139,6 +141,8 @@ bool xmodem_receive_firmware(void) {
   flash_write_offset = 0;
   error_count = 0;
   current_payload_size = 0;
+
+  nvmem_erase(STAGING);
 
   xmodem_state_t current_state = STATE_SYNC;
 
