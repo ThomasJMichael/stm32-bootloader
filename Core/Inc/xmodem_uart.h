@@ -9,6 +9,8 @@
 // Drops the received byte into the memory address pointed to by 'data'.
 bool uart_read_byte(uint8_t *data, uint32_t timeout_ms);
 
+bool uart_read_bytes(uint8_t *data, uint16_t length, uint32_t timeout_ms);
+
 // The Single Byte Transmit
 // Blocks just long enough to push exactly one byte out of the TX pin.
 void uart_write_byte(uint8_t data);
