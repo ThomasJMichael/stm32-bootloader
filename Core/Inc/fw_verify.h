@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define FW_MAGIC 0xBADC0FFE
+#define HEADER_SIZE 0x200 // 512 byte packed header
 
 typedef struct {
   uint32_t magic;

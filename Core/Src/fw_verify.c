@@ -10,7 +10,7 @@ static bool is_magic_valid(const fw_header_t *header) {
 
 static uint32_t calculate_payload_crc(NVMEM_SLOT slot, uint32_t payload_size) {
   uint32_t *start_addr =
-      (uint32_t *)(Partitions[slot].base_address + sizeof(fw_header_t));
+      (uint32_t *)(Partitions[slot].base_address + HEADER_SIZE);
 
   uint32_t word_count = payload_size / 4;
 

@@ -65,8 +65,9 @@ RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
 FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 32K
 }
 
-/* Start of the application code in flash, used by the startup to initialize data */
-__app_start = ORIGIN(FLASH) + LENGTH(FLASH);
+/* Start of the application code in flash, used by the startup to initialize data
+ * Offset by 0x200 to account for padded 512 byte header*/
+__app_start = ORIGIN(FLASH) + LENGTH(FLASH) + 0x200;
 
 /* Define output sections */
 SECTIONS
